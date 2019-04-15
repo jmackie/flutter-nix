@@ -38,18 +38,29 @@ rec {
       dontConfigure = true;
       dontStrip = true;
 
-      # Install engine and prevent cache invalidation
+      # Install engine
       buildPhase = ''
         mkdir -p bin/cache/dart-sdk
     	cp -r ${engine}/* bin/cache/dart-sdk         # $DART_SDK_PATH
         echo ${rev} > bin/cache/flutter_tools.stamp  # $STAMP_PATH
 
-        touch packages/flutter_tools/pubspec.lock    # FIXME: this effect doesn't persist
+        # ISSUE: .packages doesn't exist...?
+        ./bin/cache/dart-sdk/bin/dart \
+          --snapshot=bin/cache/flutter_tools.snapshot \
+          --packages=packages/flutter_tools/.packages \
+          packages/flutter_tools/bin/flutter_tools.dart
+
+        # Rewrite the flutter script
+        echo 'HERE="$(dirname "$(realpath -s $0)")"' > bin/flutter
+        echo '"$HERE/cache/dart-sdk/bin/dart" "$HERE/cache/flutter_tools.snapshot" "$@"' >> bin/flutter
+
+        # Not needed
+        rm bin/flutter.bat
       '';
 
       installPhase = ''
-    	  mkdir $out
-    	  cp -r . $out
+    	mkdir $out
+    	cp -r . $out
       '';
     };
 }
